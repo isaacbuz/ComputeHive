@@ -19,9 +19,10 @@ ComputeHive has been successfully implemented as a comprehensive distributed com
 ### 2. **Core Services** (`/core-services`)
 - **Authentication Service**: JWT-based auth, OAuth2 integration, RBAC
 - **Scheduler Service**: Intelligent job placement with bin-packing algorithms
-- **Marketplace Service**: Dynamic pricing and job marketplace
-- **Payment Service**: Blockchain integration for payments
-- **Telemetry Service**: Metrics collection and monitoring
+- **Marketplace Service**: Dynamic pricing and job marketplace with real-time bid/offer matching
+- **Payment Service**: Blockchain integration for payments, balance management, invoice generation
+- **Telemetry Service**: Metrics collection with InfluxDB, log aggregation, alert management
+- **Resource Service**: Resource registration, allocation management, capacity monitoring
 
 ### 3. **Web Dashboard** (`/web/dashboard`)
 - Modern React 18 + TypeScript application
@@ -30,6 +31,7 @@ ComputeHive has been successfully implemented as a comprehensive distributed com
   - Real-time metrics visualization
   - Job submission and monitoring
   - Node management
+  - Marketplace with live offers and bids
   - Billing and payments
   - Admin panel
 
@@ -65,8 +67,10 @@ ComputeHive has been successfully implemented as a comprehensive distributed com
 ### Data Architecture
 - CockroachDB for distributed SQL
 - TimescaleDB for time-series metrics
+- InfluxDB for telemetry data storage
 - Redis for caching and session management
 - MinIO for object storage
+- NATS for lightweight messaging
 - Kafka for event streaming
 
 ### Security Features
