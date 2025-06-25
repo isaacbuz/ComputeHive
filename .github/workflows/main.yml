@@ -1,0 +1,309 @@
+name: ComputeHive CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '20'
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  # Code quality and security checks
+  lint-and-security:
+    name: Lint and Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      
+      - name: Go Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=10m
+          working-directory: ./agent
+      
+      - name: Go Security Scan
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -severity medium ./...
+        working-directory: ./agent
+      
+      - name: Trivy Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+
+  # Test Go components
+  test-go:
+    name: Test Go Components
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        go: ['1.21', '1.22']
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Test Agent
+        run: |
+          go mod download
+          go test -v -race -coverprofile=coverage.out ./...
+          go tool cover -html=coverage.out -o coverage.html
+        working-directory: ./agent
+      
+      - name: Test Core Services
+        run: |
+          go mod download
+          go test -v -race -coverprofile=coverage.out ./...
+        working-directory: ./core-services
+      
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./agent/coverage.out,./core-services/coverage.out
+          flags: unittests
+          name: codecov-${{ matrix.os }}-go${{ matrix.go }}
+
+  # Test Frontend
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/dashboard/package-lock.json
+      
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: ./web/dashboard
+      
+      - name: Lint
+        run: npm run lint
+        working-directory: ./web/dashboard
+      
+      - name: Test
+        run: npm run test:ci
+        working-directory: ./web/dashboard
+      
+      - name: Build
+        run: npm run build
+        working-directory: ./web/dashboard
+
+  # Test Smart Contracts
+  test-contracts:
+    name: Test Smart Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: ./contracts
+      
+      - name: Compile Contracts
+        run: npm run compile
+        working-directory: ./contracts
+      
+      - name: Test Contracts
+        run: npm run test
+        working-directory: ./contracts
+      
+      - name: Security Audit
+        run: npm audit
+        working-directory: ./contracts
+
+  # Build Docker Images
+  build-docker:
+    name: Build Docker Images
+    needs: [lint-and-security, test-go, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    strategy:
+      matrix:
+        component:
+          - name: agent
+            context: ./agent
+            dockerfile: ./agent/Dockerfile
+          - name: auth-service
+            context: ./core-services
+            dockerfile: ./core-services/auth-service/Dockerfile
+          - name: dashboard
+            context: ./web/dashboard
+            dockerfile: ./web/dashboard/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: computehive/${{ matrix.component.name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.component.context }}
+          file: ${{ matrix.component.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Build Binaries
+  build-binaries:
+    name: Build Binaries
+    needs: [lint-and-security, test-go]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
+          - os: windows
+            arch: amd64
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      
+      - name: Build Binary
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          output_name="computehive-agent-${{ matrix.os }}-${{ matrix.arch }}"
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            output_name="${output_name}.exe"
+          fi
+          CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o "../bin/${output_name}" ./cmd/agent
+        working-directory: ./agent
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: bin/*
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [build-docker]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Kubernetes
+        run: |
+          echo "Deploying to staging..."
+          # kubectl apply -f infrastructure/kubernetes/staging/
+
+  # Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    needs: [build-docker]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Kubernetes
+        run: |
+          echo "Deploying to production..."
+          # kubectl apply -f infrastructure/kubernetes/production/
+
+  # Create Release
+  create-release:
+    name: Create Release
+    needs: [build-binaries]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries
+          path: bin/
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bin/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
