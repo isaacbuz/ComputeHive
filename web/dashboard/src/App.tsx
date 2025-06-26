@@ -19,6 +19,8 @@ import JobDetail from './pages/JobDetail';
 import Agents from './pages/Agents';
 import AgentDetail from './pages/AgentDetail';
 import Marketplace from './pages/Marketplace';
+import Resources from './pages/Resources';
+import Analytics from './pages/Analytics';
 import Billing from './pages/Billing';
 import Settings from './pages/Settings';
 
@@ -127,6 +129,8 @@ function App() {
                   <Route path="agents" element={<Agents />} />
                   <Route path="agents/:id" element={<AgentDetail />} />
                   <Route path="marketplace" element={<Marketplace />} />
+                  <Route path="resources" element={<Resources />} />
+                  <Route path="analytics" element={<Analytics />} />
                   <Route path="billing" element={<Billing />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>
