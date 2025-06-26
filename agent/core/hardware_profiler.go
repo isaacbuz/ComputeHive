@@ -569,4 +569,8 @@ type TPUInfo struct {
 	Model          string
 	Generation     int
 	BenchmarkScore float64 // TOPS
+<<<<<<< HEAD
 } 
+=======
+}
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849

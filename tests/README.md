@@ -291,4 +291,8 @@ When adding new features:
 3. Update e2e tests for UI changes
 4. Add performance tests for critical paths
 5. Consider security implications
+<<<<<<< HEAD
 6. Document test scenarios 
+=======
+6. Document test scenarios
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849

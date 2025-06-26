@@ -374,4 +374,8 @@ if __name__ == "__main__":
         "Sample Network Chaos",
         runner.network_chaos.simulate_packet_loss,
         "eth0", 5
+<<<<<<< HEAD
     ) 
+=======
+    )
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849

@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   Button,
+<<<<<<< HEAD
   TextField,
   Select,
   MenuItem,
@@ -20,21 +21,28 @@ import {
   DialogActions,
   Alert,
   LinearProgress,
+=======
+  Chip,
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+<<<<<<< HEAD
   Tooltip,
   Badge,
   Tab,
   Tabs,
+=======
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
 } from '@mui/material';
 import {
   ShoppingCart,
   LocalOffer,
   TrendingUp,
+<<<<<<< HEAD
   TrendingDown,
   Timer,
   Speed,
@@ -65,16 +73,24 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+=======
+  AttachMoney,
+} from '@mui/icons-material';
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
 import { useAuth } from '../contexts/AuthContext';
 
 interface MarketOffer {
   id: string;
+<<<<<<< HEAD
   provider_id: string;
+=======
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
   provider_name: string;
   resource_type: string;
   cpu_cores: number;
   memory_gb: number;
   gpu_count: number;
+<<<<<<< HEAD
   gpu_model: string;
   storage_gb: number;
   network_bandwidth_gbps: number;
@@ -163,21 +179,44 @@ export default function Marketplace() {
   useEffect(() => {
     fetchMarketData();
     const interval = setInterval(fetchMarketData, 10000); // Refresh every 10 seconds
+=======
+  price_per_hour: number;
+  location: string;
+  status: string;
+}
+
+export default function Marketplace() {
+  const { user } = useAuth();
+  const [offers, setOffers] = useState<MarketOffer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 30000);
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
     return () => clearInterval(interval);
   }, []);
 
   const fetchMarketData = async () => {
     try {
+<<<<<<< HEAD
       // Mock data
       const mockOffers: MarketOffer[] = [
         {
           id: '1',
           provider_id: 'provider-1',
+=======
+      // Mock data - replace with API call
+      const mockOffers: MarketOffer[] = [
+        {
+          id: '1',
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
           provider_name: 'CloudNode Alpha',
           resource_type: 'GPU',
           cpu_cores: 32,
           memory_gb: 128,
           gpu_count: 4,
+<<<<<<< HEAD
           gpu_model: 'NVIDIA A100',
           storage_gb: 1000,
           network_bandwidth_gbps: 10,
@@ -188,16 +227,24 @@ export default function Marketplace() {
           sla_uptime: 99.9,
           created_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 86400000).toISOString(),
+=======
+          price_per_hour: 4.5,
+          location: 'US-East',
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
           status: 'active',
         },
         {
           id: '2',
+<<<<<<< HEAD
           provider_id: 'provider-2',
+=======
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
           provider_name: 'DataCenter Pro',
           resource_type: 'CPU',
           cpu_cores: 64,
           memory_gb: 256,
           gpu_count: 0,
+<<<<<<< HEAD
           gpu_model: '',
           storage_gb: 2000,
           network_bandwidth_gbps: 25,
@@ -208,10 +255,15 @@ export default function Marketplace() {
           sla_uptime: 99.5,
           created_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 86400000).toISOString(),
+=======
+          price_per_hour: 2.8,
+          location: 'EU-West',
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
           status: 'active',
         },
       ];
 
+<<<<<<< HEAD
       const mockBids: MarketBid[] = [
         {
           id: '1',
@@ -252,6 +304,9 @@ export default function Marketplace() {
       setOffers(mockOffers);
       setBids(mockBids);
       setStats(mockStats);
+=======
+      setOffers(mockOffers);
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch market data:', error);
@@ -259,6 +314,7 @@ export default function Marketplace() {
     }
   };
 
+<<<<<<< HEAD
   const handleCreateOffer = async (formData: any) => {
     try {
       // API call to create offer
@@ -423,6 +479,14 @@ export default function Marketplace() {
       </Box>
 
       {/* Market Statistics */}
+=======
+  return (
+    <Box>
+      <Typography variant="h4" fontWeight="bold" mb={3}>
+        Compute Marketplace
+      </Typography>
+
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} md={3}>
           <Card>
@@ -432,6 +496,7 @@ export default function Marketplace() {
                   <Typography color="textSecondary" gutterBottom>
                     Active Offers
                   </Typography>
+<<<<<<< HEAD
                   <Typography variant="h4">
                     {stats?.active_offers || 0}
                   </Typography>
@@ -444,6 +509,12 @@ export default function Marketplace() {
                   +12% from last hour
                 </Typography>
               </Box>
+=======
+                  <Typography variant="h4">25</Typography>
+                </Box>
+                <LocalOffer color="primary" fontSize="large" />
+              </Box>
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
             </CardContent>
           </Card>
         </Grid>
@@ -456,6 +527,7 @@ export default function Marketplace() {
                   <Typography color="textSecondary" gutterBottom>
                     Active Bids
                   </Typography>
+<<<<<<< HEAD
                   <Typography variant="h4">
                     {stats?.active_bids || 0}
                   </Typography>
@@ -468,6 +540,12 @@ export default function Marketplace() {
                   -5% from last hour
                 </Typography>
               </Box>
+=======
+                  <Typography variant="h4">18</Typography>
+                </Box>
+                <ShoppingCart color="secondary" fontSize="large" />
+              </Box>
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
             </CardContent>
           </Card>
         </Grid>
@@ -480,6 +558,7 @@ export default function Marketplace() {
                   <Typography color="textSecondary" gutterBottom>
                     Avg CPU Price
                   </Typography>
+<<<<<<< HEAD
                   <Typography variant="h4">
                     ${stats?.avg_cpu_price.toFixed(2) || '0.00'}
                   </Typography>
@@ -489,6 +568,12 @@ export default function Marketplace() {
               <Typography variant="caption" color="textSecondary">
                 Per core per hour
               </Typography>
+=======
+                  <Typography variant="h4">$0.80</Typography>
+                </Box>
+                <AttachMoney color="success" fontSize="large" />
+              </Box>
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
             </CardContent>
           </Card>
         </Grid>
@@ -501,6 +586,7 @@ export default function Marketplace() {
                   <Typography color="textSecondary" gutterBottom>
                     Avg GPU Price
                   </Typography>
+<<<<<<< HEAD
                   <Typography variant="h4">
                     ${stats?.avg_gpu_price.toFixed(2) || '0.00'}
                   </Typography>
@@ -510,11 +596,18 @@ export default function Marketplace() {
               <Typography variant="caption" color="textSecondary">
                 Per GPU per hour
               </Typography>
+=======
+                  <Typography variant="h4">$3.20</Typography>
+                </Box>
+                <AttachMoney color="warning" fontSize="large" />
+              </Box>
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
+<<<<<<< HEAD
       {/* Price Trends Chart */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
@@ -979,3 +1072,57 @@ export default function Marketplace() {
     </Box>
   );
 } 
+=======
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Available Offers
+        </Typography>
+        
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Provider</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Specifications</TableCell>
+                <TableCell>Price/Hour</TableCell>
+                <TableCell>Location</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {offers.map((offer) => (
+                <TableRow key={offer.id}>
+                  <TableCell>{offer.provider_name}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={offer.resource_type}
+                      color={offer.resource_type === 'GPU' ? 'success' : 'default'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    CPU: {offer.cpu_cores} cores | RAM: {offer.memory_gb}GB
+                    {offer.gpu_count > 0 && ` | GPU: ${offer.gpu_count}`}
+                  </TableCell>
+                  <TableCell>
+                    <Typography color="primary" fontWeight="bold">
+                      ${offer.price_per_hour.toFixed(2)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{offer.location}</TableCell>
+                  <TableCell>
+                    <Button size="small" variant="contained">
+                      Accept
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Box>
+  );
+}
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849

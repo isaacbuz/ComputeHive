@@ -143,4 +143,8 @@ export function setup() {
 
 export function teardown(data) {
   console.log(`Test completed. Duration: ${new Date() - data.startTime}ms`);
+<<<<<<< HEAD
 } 
+=======
+}
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849

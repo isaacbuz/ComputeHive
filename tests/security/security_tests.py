@@ -285,4 +285,8 @@ class TestBusinessLogic:
         pass
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     pytest.main([__file__, "-v"]) 
+=======
+    pytest.main([__file__, "-v"])
+>>>>>>> 4c40309e804c8f522625b7fd70da67d8d7383849
