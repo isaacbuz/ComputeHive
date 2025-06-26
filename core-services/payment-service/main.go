@@ -506,23 +506,17 @@ func (s *PaymentService) processWithdrawal(payment *Payment) error {
 		payment.TxHash = txHash
 	}
 	
-	// Update balance
-	s.mu.Lock()
-	balance.Reserved[payment.Currency] = balance.Reserved[payment.Currency].Sub(payment.Amount)
-	s.mu.Unlock()
-	
 	return nil
 }
 
 func (s *PaymentService) processJobPayment(payment *Payment) error {
-	// This interacts with the smart contract to release payment
+	// Process job payment through escrow contract
+	// This would interact with the smart contract
 	
-	// Get job details from scheduler
-	// Verify job completion
-	// Call smart contract to release payment
+	// For now, simulate processing
+	time.Sleep(1 * time.Second)
 	
-	// For now, simulate the process
-	time.Sleep(3 * time.Second)
+	// Generate transaction hash (mock)
 	payment.TxHash = fmt.Sprintf("0x%x", time.Now().UnixNano())
 	
 	return nil
@@ -533,30 +527,29 @@ func (s *PaymentService) sendETH(toAddress string, amount decimal.Decimal) (stri
 		return "", fmt.Errorf("no private key configured")
 	}
 	
-	// Get account nonce
+	// Convert decimal to wei
+	wei := new(big.Int)
+	wei.SetString(amount.Mul(decimal.NewFromInt(1e18)).StringFixed(0), 10)
+	
+	// Get nonce
 	fromAddress := crypto.PubkeyToAddress(s.blockchain.PrivateKey.PublicKey)
 	nonce, err := s.ethClient.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get nonce: %w", err)
 	}
 	
 	// Get gas price
 	gasPrice, err := s.ethClient.SuggestGasPrice(context.Background())
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get gas price: %w", err)
 	}
 	
-	// Convert amount to wei
-	weiAmount := new(big.Int)
-	weiAmount.SetString(amount.Mul(decimal.NewFromFloat(1e18)).String(), 10)
-	
 	// Create transaction
-	to := common.HexToAddress(toAddress)
 	tx := types.NewTransaction(
 		nonce,
-		to,
-		weiAmount,
-		uint64(21000), // Gas limit for simple transfer
+		common.HexToAddress(toAddress),
+		wei,
+		21000, // Standard ETH transfer gas limit
 		gasPrice,
 		nil,
 	)
@@ -564,19 +557,17 @@ func (s *PaymentService) sendETH(toAddress string, amount decimal.Decimal) (stri
 	// Sign transaction
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(s.blockchain.ChainID), s.blockchain.PrivateKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to sign transaction: %w", err)
 	}
 	
 	// Send transaction
 	err = s.ethClient.SendTransaction(context.Background(), signedTx)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to send transaction: %w", err)
 	}
 	
 	return signedTx.Hash().Hex(), nil
 }
-
-// Balance Management
 
 func (s *PaymentService) updateBalance(payment *Payment) {
 	s.mu.Lock()
@@ -596,15 +587,12 @@ func (s *PaymentService) updateBalance(payment *Payment) {
 	
 	switch payment.Type {
 	case "deposit":
-		if payment.Status == "completed" {
-			balance.Available[payment.Currency] = balance.Available[payment.Currency].Add(payment.Amount)
-		}
+		balance.Available[payment.Currency] = balance.Available[payment.Currency].Add(payment.Amount)
 	case "withdrawal":
-		// Already handled in processWithdrawal
+		balance.Reserved[payment.Currency] = balance.Reserved[payment.Currency].Sub(payment.Amount)
 	case "job_payment":
-		if payment.Status == "completed" {
-			balance.Available[payment.Currency] = balance.Available[payment.Currency].Sub(payment.Amount)
-		}
+		// Handle job payment balance updates
+		balance.Available[payment.Currency] = balance.Available[payment.Currency].Sub(payment.Amount)
 	}
 	
 	balance.LastUpdated = time.Now()
@@ -615,184 +603,143 @@ func (s *PaymentService) updateBalance(payment *Payment) {
 	s.balanceGauge.WithLabelValues(payment.UserID, payment.Currency, "reserved").Set(balance.Reserved[payment.Currency].InexactFloat64())
 }
 
-// Blockchain Monitoring
-
 func (s *PaymentService) blockchainMonitor() {
-	// Monitor blockchain for:
-	// 1. Incoming deposits
-	// 2. Contract events
-	// 3. Transaction confirmations
+	// Monitor blockchain for incoming transactions
+	// This would watch for deposits and update balances accordingly
 	
-	ticker := time.NewTicker(15 * time.Second) // Check every block
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	
 	for range ticker.C {
-		// Get latest block
-		block, err := s.ethClient.BlockByNumber(context.Background(), nil)
-		if err != nil {
-			log.Printf("Failed to get latest block: %v", err)
-			continue
+		// Check for pending deposits
+		s.mu.RLock()
+		for _, payment := range s.payments {
+			if payment.Type == "deposit" && payment.Status == "pending" {
+				// In production, check blockchain for transaction confirmation
+				// For now, just simulate
+			}
 		}
-		
-		log.Printf("Monitoring block %s", block.Number().String())
-		
-		// Check for deposit transactions
-		// In production, this would filter logs for deposit events
+		s.mu.RUnlock()
 	}
 }
 
-// Invoice Generation
-
 func (s *PaymentService) invoiceGenerator() {
 	// Generate monthly invoices
-	ticker := time.NewTicker(24 * time.Hour) // Check daily
+	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 	
 	for range ticker.C {
+		// Check if it's the first day of the month
 		now := time.Now()
-		if now.Day() == 1 { // First day of month
+		if now.Day() == 1 {
 			s.generateMonthlyInvoices()
 		}
 	}
 }
 
 func (s *PaymentService) generateMonthlyInvoices() {
-	log.Println("Generating monthly invoices...")
+	// Generate invoices for all users
+	// This would aggregate job costs and create invoices
 	
-	// Get previous month period
-	now := time.Now()
-	firstDay := time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, time.UTC)
-	lastDay := firstDay.AddDate(0, 1, -1)
-	
-	// For each user, calculate usage and generate invoice
-	// This would query job history and calculate costs
-	
-	// Mock invoice generation
 	s.mu.RLock()
-	userIDs := make([]string, 0)
-	for userID := range s.balances {
-		userIDs = append(userIDs, userID)
+	users := make(map[string]bool)
+	for _, payment := range s.payments {
+		users[payment.UserID] = true
 	}
 	s.mu.RUnlock()
 	
-	for _, userID := range userIDs {
+	for userID := range users {
+		// Calculate monthly usage
+		// Create invoice
 		invoice := &Invoice{
 			ID:          generateID(),
 			UserID:      userID,
-			PeriodStart: firstDay,
-			PeriodEnd:   lastDay,
-			TotalAmount: decimal.NewFromFloat(123.45), // Mock amount
+			PeriodStart: time.Now().AddDate(0, -1, 0),
+			PeriodEnd:   time.Now(),
+			TotalAmount: decimal.Zero,
 			Currency:    "USD",
-			Status:      "pending",
-			DueDate:     now.AddDate(0, 0, 30), // 30 days to pay
-			LineItems: []LineItem{
-				{
-					Description: "Compute usage",
-					Quantity:    decimal.NewFromFloat(100),
-					UnitPrice:   decimal.NewFromFloat(1.2345),
-					Amount:      decimal.NewFromFloat(123.45),
-				},
-			},
-			CreatedAt: now,
+			Status:      "draft",
+			DueDate:     time.Now().AddDate(0, 0, 30),
+			LineItems:   []LineItem{},
+			CreatedAt:   time.Now(),
 		}
 		
 		s.mu.Lock()
 		s.invoices[invoice.ID] = invoice
 		s.mu.Unlock()
 		
-		// Send invoice notification
+		// Publish invoice created event
 		s.publishInvoiceEvent("invoice.created", invoice)
 	}
 }
 
-// Event Handling
-
 func (s *PaymentService) subscribeToEvents() {
-	// Subscribe to job completion events for payment processing
+	// Subscribe to job completion events
 	s.nats.Subscribe("job.completed", func(msg *nats.Msg) {
 		var job map[string]interface{}
 		if err := json.Unmarshal(msg.Data, &job); err != nil {
 			return
 		}
 		
-		// Process job payment
 		s.handleJobCompletion(job)
 	})
 	
 	// Subscribe to marketplace match events
-	s.nats.Subscribe("match.confirmed", func(msg *nats.Msg) {
+	s.nats.Subscribe("marketplace.match.confirmed", func(msg *nats.Msg) {
 		var match map[string]interface{}
 		if err := json.Unmarshal(msg.Data, &match); err != nil {
 			return
 		}
 		
-		// Reserve funds for match
 		s.handleMatchConfirmed(match)
 	})
 }
 
 func (s *PaymentService) handleJobCompletion(job map[string]interface{}) {
-	jobID := job["id"].(string)
-	consumerID := job["user_id"].(string)
-	providerID := job["assigned_agent_id"].(string)
-	amount := job["actual_cost"].(float64)
+	// Process job payment
+	jobID, _ := job["id"].(string)
+	userID, _ := job["user_id"].(string)
+	cost, _ := job["cost"].(float64)
 	
-	// Create payment from consumer to provider
-	payment := &Payment{
-		ID:        generateID(),
-		UserID:    consumerID,
-		Type:      "job_payment",
-		Amount:    decimal.NewFromFloat(amount),
-		Currency:  "ETH",
-		Status:    "pending",
-		JobID:     jobID,
-		ToAddress: providerID, // In reality, would get provider's address
-		CreatedAt: time.Now(),
+	if jobID != "" && userID != "" && cost > 0 {
+		payment := &Payment{
+			ID:        generateID(),
+			UserID:    userID,
+			Type:      "job_payment",
+			Amount:    decimal.NewFromFloat(cost),
+			Currency:  "USD",
+			Status:    "pending",
+			JobID:     jobID,
+			CreatedAt: time.Now(),
+		}
+		
+		s.mu.Lock()
+		s.payments[payment.ID] = payment
+		s.mu.Unlock()
+		
+		// Process payment
+		go s.processPayment(payment)
 	}
-	
-	s.mu.Lock()
-	s.payments[payment.ID] = payment
-	s.mu.Unlock()
-	
-	// Process payment
-	go s.processPayment(payment)
 }
 
 func (s *PaymentService) handleMatchConfirmed(match map[string]interface{}) {
-	// Reserve funds for the match
-	consumerID := match["consumer_id"].(string)
-	amount, _ := decimal.NewFromString(match["agreed_price"].(string))
-	
-	s.mu.Lock()
-	balance, exists := s.balances[consumerID]
-	if exists {
-		// Move funds from available to reserved
-		if balance.Available["ETH"].GreaterThanOrEqual(amount) {
-			balance.Available["ETH"] = balance.Available["ETH"].Sub(amount)
-			balance.Reserved["ETH"] = balance.Reserved["ETH"].Add(amount)
-		}
-	}
-	s.mu.Unlock()
+	// Handle marketplace match confirmation
+	// This would trigger payment processing
 }
-
-// Helper methods
 
 func (s *PaymentService) updatePaymentStatus(paymentID, status, failureReason string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
-	payment, exists := s.payments[paymentID]
-	if !exists {
-		return
-	}
-	
-	payment.Status = status
-	if status == "completed" {
-		now := time.Now()
-		payment.CompletedAt = &now
-	}
-	if failureReason != "" {
-		payment.FailureReason = failureReason
+	if payment, exists := s.payments[paymentID]; exists {
+		payment.Status = status
+		if failureReason != "" {
+			payment.FailureReason = failureReason
+		}
+		if status == "completed" {
+			now := time.Now()
+			payment.CompletedAt = &now
+		}
 	}
 }
 
@@ -806,7 +753,7 @@ func (s *PaymentService) publishInvoiceEvent(event string, invoice *Invoice) {
 	s.nats.Publish(event, data)
 }
 
-// JWT Claims type
+// JWT Claims
 type Claims struct {
 	UserID   string   `json:"user_id"`
 	Email    string   `json:"email"`
@@ -819,19 +766,24 @@ type Claims struct {
 // Auth middleware
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Simple auth check - in production, validate JWT properly
 		tokenString := r.Header.Get("Authorization")
 		if tokenString == "" {
-			http.Error(w, "Authorization required", http.StatusUnauthorized)
+			http.Error(w, "Missing authorization header", http.StatusUnauthorized)
 			return
 		}
 		
-		// Mock claims for development
-		claims := &Claims{
-			UserID: "user-123",
-			Role:   "user",
+		tokenString = tokenString[7:] // Remove "Bearer "
+		
+		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+		
+		if err != nil || !token.Valid {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
 		}
 		
+		claims := token.Claims.(*Claims)
 		ctx := context.WithValue(r.Context(), "claims", claims)
 		next(w, r.WithContext(ctx))
 	}
@@ -842,32 +794,33 @@ func generateID() string {
 }
 
 func main() {
-	// Create payment service
 	paymentService, err := NewPaymentService()
 	if err != nil {
 		log.Fatalf("Failed to create payment service: %v", err)
 	}
 	
-	// Setup routes
 	router := mux.NewRouter()
 	
 	// Health check
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
 	}).Methods("GET")
 	
-	// Metrics endpoint
+	// Prometheus metrics
 	router.Handle("/metrics", promhttp.Handler())
 	
-	// Payment endpoints
-	router.HandleFunc("/api/v1/payments", authMiddleware(paymentService.ProcessPayment)).Methods("POST")
-	router.HandleFunc("/api/v1/payments", authMiddleware(paymentService.GetPaymentHistory)).Methods("GET")
-	router.HandleFunc("/api/v1/balance", authMiddleware(paymentService.GetBalance)).Methods("GET")
-	router.HandleFunc("/api/v1/invoices", authMiddleware(paymentService.GetInvoices)).Methods("GET")
-	router.HandleFunc("/api/v1/payment-methods", authMiddleware(paymentService.AddPaymentMethod)).Methods("POST")
+	// API routes
+	api := router.PathPrefix("/api/v1").Subrouter()
 	
-	// Setup CORS
+	// Payment endpoints
+	api.HandleFunc("/payments", authMiddleware(paymentService.ProcessPayment)).Methods("POST")
+	api.HandleFunc("/payments/balance", authMiddleware(paymentService.GetBalance)).Methods("GET")
+	api.HandleFunc("/payments", authMiddleware(paymentService.GetPaymentHistory)).Methods("GET")
+	api.HandleFunc("/payments/invoices", authMiddleware(paymentService.GetInvoices)).Methods("GET")
+	api.HandleFunc("/payments/methods", authMiddleware(paymentService.AddPaymentMethod)).Methods("POST")
+	
+	// CORS middleware
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "https://computehive.io"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -877,7 +830,6 @@ func main() {
 	
 	handler := c.Handler(router)
 	
-	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8004"

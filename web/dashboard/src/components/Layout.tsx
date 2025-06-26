@@ -19,6 +19,7 @@ import {
   Badge,
   useTheme,
   useMediaQuery,
+  Collapse,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -31,18 +32,48 @@ import {
   Logout as LogoutIcon,
   Notifications as NotificationsIcon,
   ChevronLeft as ChevronLeftIcon,
+  ExpandLess,
+  ExpandMore,
+  Memory as MemoryIcon,
+  Analytics as AnalyticsIcon,
+  Assessment as AssessmentIcon,
+  Cloud as CloudIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
 const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Jobs', icon: <WorkIcon />, path: '/jobs' },
-  { text: 'Agents', icon: <ComputerIcon />, path: '/agents' },
-  { text: 'Marketplace', icon: <StoreIcon />, path: '/marketplace' },
-  { text: 'Billing', icon: <BillingIcon />, path: '/billing' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  { 
+    text: 'Dashboard', 
+    icon: <DashboardIcon />, 
+    path: '/dashboard' 
+  },
+  { 
+    text: 'Jobs', 
+    icon: <WorkIcon />, 
+    path: '/jobs' 
+  },
+  { 
+    text: 'Resources', 
+    icon: <MemoryIcon />, 
+    path: '/resources' 
+  },
+  { 
+    text: 'Marketplace', 
+    icon: <StoreIcon />, 
+    path: '/marketplace' 
+  },
+  { 
+    text: 'Analytics', 
+    icon: <AnalyticsIcon />, 
+    path: '/analytics' 
+  },
+  { 
+    text: 'Settings', 
+    icon: <SettingsIcon />, 
+    path: '/settings' 
+  },
 ];
 
 export default function Layout() {
@@ -199,36 +230,34 @@ export default function Layout() {
           open={drawerOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile
+            keepMounted: true, // Better open performance on mobile.
           }}
           sx={{
+            display: { xs: 'block' },
             '& .MuiDrawer-paper': {
-              width: drawerWidth,
               boxSizing: 'border-box',
-              bgcolor: 'background.paper',
-              borderRight: '1px solid',
-              borderColor: 'divider',
+              width: drawerWidth,
+              backgroundColor: theme.palette.background.default,
+              borderRight: `1px solid ${theme.palette.divider}`,
             },
           }}
         >
           {drawer}
         </Drawer>
       </Box>
-      
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          ml: { sm: drawerOpen ? 0 : `-${drawerWidth}px` },
           transition: theme.transitions.create(['margin', 'width'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
-          mt: 8,
         }}
       >
+        <Toolbar />
         <Outlet />
       </Box>
     </Box>
