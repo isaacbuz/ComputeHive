@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Test Database
+  test-db:
+    image: cockroachdb/cockroach:latest-v23.1
+    command: start-single-node --insecure
+    environment:
+      - COCKROACH_DATABASE=computehive_test
+    ports:
+      - "26258:26257"
+    networks:
+      - test-net
+
+  # Test Redis
+  test-redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass test123
+    ports:
+      - "6380:6379"
+    networks:
+      - test-net
+
+  # Test NATS
+  test-nats:
+    image: nats:2.10-alpine
+    command: "-js"
+    ports:
+      - "4223:4222"
+    networks:
+      - test-net
+
+  # Auth Service Test Instance
+  auth-service-test:
+    build: 
+      context: ../../core-services/auth-service
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=test-db
+      - DB_PORT=26257
+      - REDIS_HOST=test-redis
+      - REDIS_PORT=6379
+      - NATS_URL=nats://test-nats:4222
+      - JWT_SECRET=test-secret-key
+      - TEST_MODE=true
+    depends_on:
+      - test-db
+      - test-redis
+      - test-nats
+    networks:
+      - test-net
+
+  # Test Runner
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      - TEST_ENV=integration
+      - AUTH_SERVICE_URL=http://auth-service-test:8080
+      - DB_HOST=test-db
+      - REDIS_HOST=test-redis
+    volumes:
+      - ./test-results:/test-results
+    depends_on:
+      - auth-service-test
+    networks:
+      - test-net
+    command: |
+      sh -c "
+        echo 'Waiting for services to be ready...'
+        sleep 10
+        echo 'Running integration tests...'
+        go test -v ./integration/... -tags=integration -coverprofile=/test-results/coverage.out
+        go tool cover -html=/test-results/coverage.out -o /test-results/coverage.html
+      "
+
+networks:
+  test-net:
+    driver: bridge
+
+volumes:
+  test-results: 
